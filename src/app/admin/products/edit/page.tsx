@@ -1,17 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import ProductForm from '@/components/admin/ProductForm';
 import { getProductById, updateProduct } from '@/lib/api/products';
 import type { ProductFormData, Product } from '@/lib/types';
 
-export default function EditProductPage() {
+function EditProductContent() {
     const router = useRouter();
-    const params = useParams();
-    const productId = params.id as string;
+    const searchParams = useSearchParams();
+    const productId = searchParams.get('id');
 
     const [product, setProduct] = useState<Product | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +35,8 @@ export default function EditProductPage() {
     }, [productId]);
 
     async function handleSubmit(data: ProductFormData, imageFile?: File) {
+        if (!productId) return;
+
         setIsLoading(true);
         setError(null);
 
@@ -50,6 +52,16 @@ export default function EditProductPage() {
         } finally {
             setIsLoading(false);
         }
+    }
+
+    if (!productId) {
+        return (
+            <div className="p-6 lg:p-8">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                    Missing product ID
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -100,5 +112,13 @@ export default function EditProductPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function EditProductPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center">Loading editor...</div>}>
+            <EditProductContent />
+        </Suspense>
     );
 }
