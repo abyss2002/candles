@@ -5,20 +5,17 @@ const AUTH_KEY = 'admin_authenticated';
 const AUTH_EXPIRY_KEY = 'admin_auth_expiry';
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
+// Client-side password verification
 export async function verifyAdminPassword(password: string): Promise<boolean> {
-    try {
-        const response = await fetch('/api/admin/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password }),
-        });
+    // In a real production app, this should be done server-side or via Supabase Auth.
+    // For this static export, we're checking against a public env var (UI protection only).
+    // Real security relies on Supabase RLS policies.
+    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
 
-        const data = await response.json();
-        return data.success === true;
-    } catch (error) {
-        console.error('Error verifying password:', error);
-        return false;
-    }
+    // Simulate network delay for UX
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    return password === adminPassword;
 }
 
 export function setAdminAuthenticated(): void {
