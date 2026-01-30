@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit, Dancing_Script } from "next/font/google";
+import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -30,7 +31,7 @@ export default function RootLayout({
       <body
         className={`${outfit.variable} ${dancingScript.variable} antialiased font-[family-name:var(--font-outfit)]`}
       >
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

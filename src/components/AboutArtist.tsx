@@ -84,10 +84,10 @@ export default function AboutArtist() {
                                 whileInView={{ opacity: 1, y: 0 }}
                                 viewport={{ once: true }}
                                 transition={{ delay: 0.5 }}
-                                className="absolute -bottom-6 -left-6 md:-left-12 bg-white p-4 rounded-xl shadow-lg max-w-[200px]"
+                                className="absolute bottom-4 left-4 md:-bottom-6 md:-left-12 bg-white p-4 rounded-xl shadow-lg max-w-[180px] md:max-w-[200px]"
                             >
-                                <Quote className="w-6 h-6 text-terracotta mb-2" />
-                                <p className="text-sm text-deep-brown italic">
+                                <Quote className="w-5 h-5 md:w-6 md:h-6 text-terracotta mb-2" />
+                                <p className="text-xs md:text-sm text-deep-brown italic leading-relaxed">
                                     &quot;Handmade isn&apos;t just a process, it&apos;s a promise of uniqueness.&quot;
                                 </p>
                             </motion.div>

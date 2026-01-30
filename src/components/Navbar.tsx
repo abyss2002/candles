@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, ShoppingBag, Search, Sparkles } from 'lucide-react';
+import { Menu, X, ShoppingBag, Search, Sparkles, Package } from 'lucide-react';
 import Link from 'next/link';
 
 const navLinks = [
@@ -14,6 +14,34 @@ const navLinks = [
 
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
+    const [cartCount, setCartCount] = useState(0);
+
+    useEffect(() => {
+        // Load cart count from localStorage
+        const updateCartCount = () => {
+            const savedCart = localStorage.getItem('cart');
+            if (savedCart) {
+                const cart = JSON.parse(savedCart);
+                const count = cart.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0);
+                setCartCount(count);
+            } else {
+                setCartCount(0);
+            }
+        };
+
+        updateCartCount();
+
+        // Listen for storage changes (when cart is updated in other tabs)
+        window.addEventListener('storage', updateCartCount);
+
+        // Poll for changes in the same tab
+        const interval = setInterval(updateCartCount, 1000);
+
+        return () => {
+            window.removeEventListener('storage', updateCartCount);
+            clearInterval(interval);
+        };
+    }, []);
 
     return (
         <>
@@ -43,14 +71,20 @@ export default function Navbar() {
 
                         {/* Desktop Actions - Hidden on mobile */}
                         <div className="hidden md:flex items-center gap-4">
-                            <button className="p-2 text-warm-brown hover:text-terracotta transition-colors">
-                                <Search className="w-5 h-5" />
-                            </button>
+                            <Link
+                                href="/orders"
+                                className="p-2 text-warm-brown hover:text-terracotta transition-colors"
+                                title="Track Orders"
+                            >
+                                <Package className="w-5 h-5" />
+                            </Link>
                             <Link href="/cart" className="relative p-2 text-warm-brown hover:text-terracotta transition-colors">
                                 <ShoppingBag className="w-5 h-5" />
-                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-terracotta text-white text-xs rounded-full flex items-center justify-center">
-                                    3
-                                </span>
+                                {cartCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-terracotta text-white text-xs rounded-full flex items-center justify-center">
+                                        {cartCount > 9 ? '9+' : cartCount}
+                                    </span>
+                                )}
                             </Link>
                         </div>
 
@@ -110,17 +144,26 @@ export default function Navbar() {
                                             </Link>
                                         </motion.div>
                                     ))}
+                                    <motion.div
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: navLinks.length * 0.1 }}
+                                    >
+                                        <Link
+                                            href="/orders"
+                                            onClick={() => setIsOpen(false)}
+                                            className="block py-3 text-lg font-medium text-deep-brown hover:text-terracotta border-b border-beige"
+                                        >
+                                            Track Orders
+                                        </Link>
+                                    </motion.div>
                                 </nav>
 
                                 {/* Mobile Actions */}
                                 <div className="mt-8 flex items-center gap-4">
-                                    <button className="flex-1 flex items-center justify-center gap-2 py-3 bg-beige rounded-full text-warm-brown">
-                                        <Search className="w-5 h-5" />
-                                        <span>Search</span>
-                                    </button>
                                     <Link href="/cart" onClick={() => setIsOpen(false)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-terracotta rounded-full text-white">
                                         <ShoppingBag className="w-5 h-5" />
-                                        <span>Cart (3)</span>
+                                        <span>Cart {cartCount > 0 ? `(${cartCount})` : ''}</span>
                                     </Link>
                                 </div>
                             </div>

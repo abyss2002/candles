@@ -1,26 +1,71 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { Filter, Flame } from 'lucide-react';
+import { Filter, Flame, Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
+import NotifyModal from '@/components/NotifyModal';
+import { useToast } from '@/components/Toast';
+import { getProducts } from '@/lib/api/products';
+import { createStockRequest } from '@/lib/api/custom-orders';
+import type { Product, CartItem } from '@/lib/types';
 
-const candleProducts = [
-    { id: 'c1', name: 'Vanilla Bean Candle', price: 650, image: '/products/vanilla-candle.jpg', category: 'candle' as const },
-    { id: 'c2', name: 'Lavender Dreams Candle', price: 550, image: '/products/lavender-candle.jpg', category: 'candle' as const },
-    { id: 'c3', name: 'Rose Garden Candle', price: 700, image: '/products/rose-candle.jpg', category: 'candle' as const },
-    { id: 'c4', name: 'Sandalwood Bliss', price: 750, image: '/products/vanilla-candle.jpg', category: 'candle' as const },
-    { id: 'c5', name: 'Ocean Breeze Candle', price: 600, image: '/products/lavender-candle.jpg', category: 'candle' as const },
-    { id: 'c6', name: 'Cinnamon Spice Candle', price: 550, image: '/products/rose-candle.jpg', category: 'candle' as const },
-    { id: 'c7', name: 'Jasmine Nights Candle', price: 650, image: '/products/vanilla-candle.jpg', category: 'candle' as const },
-    { id: 'c8', name: 'Fresh Linen Candle', price: 500, image: '/products/lavender-candle.jpg', category: 'candle' as const },
-];
-
-const fragranceCategories = ['All', 'Floral', 'Woody', 'Fresh', 'Spicy', 'Sweet'];
+const fragranceCategories = ['All', 'Floral', 'Woody', 'Fresh', 'Spicy', 'Sweet', 'Citrus'];
 
 export default function CandlesPage() {
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeFilter, setActiveFilter] = useState('All');
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+    const toast = useToast();
+
+    useEffect(() => {
+        async function loadProducts() {
+            const data = await getProducts('candle');
+            setProducts(data);
+            setLoading(false);
+        }
+        loadProducts();
+    }, []);
+
+    const handleAddToCart = (product: Product) => {
+        const savedCart = localStorage.getItem('cart');
+        const cart: CartItem[] = savedCart ? JSON.parse(savedCart) : [];
+
+        const existingIndex = cart.findIndex(item => item.product.id === product.id);
+        if (existingIndex >= 0) {
+            cart[existingIndex].quantity += 1;
+        } else {
+            cart.push({ product, quantity: 1 });
+        }
+
+        localStorage.setItem('cart', JSON.stringify(cart));
+        toast.success(`${product.name} added to cart!`);
+    };
+
+    const handleRequestStock = (product: Product) => {
+        setSelectedProduct(product);
+    };
+
+    const handleNotifySubmit = async (email: string, name: string) => {
+        if (!selectedProduct) return;
+
+        const result = await createStockRequest(selectedProduct.id, email, name);
+        if (result) {
+            toast.success(`We'll notify you at ${email} when ${selectedProduct.name} is back in stock!`);
+        } else {
+            toast.error('Something went wrong. Please try again.');
+        }
+        setSelectedProduct(null);
+    };
+
+    const filteredProducts = activeFilter === 'All'
+        ? products
+        : products.filter(p => p.fragrance_type?.toLowerCase() === activeFilter.toLowerCase());
+
     return (
         <main className="min-h-screen bg-cream">
             <Navbar />
@@ -47,18 +92,22 @@ export default function CandlesPage() {
                 </div>
             </section>
 
-            {/* Fragrance Categories */}
-            <section className="px-4 md:px-12 lg:px-24 py-6">
-                <div className="flex flex-wrap gap-2 justify-center">
-                    {fragranceCategories.map((cat, index) => (
+            {/* Fragrance Filters */}
+            <section className="px-4 md:px-12 lg:px-24 py-8">
+                <div className="flex items-center gap-4 mb-6">
+                    <Filter className="w-5 h-5 text-sage" />
+                    <span className="text-deep-brown font-medium">Filter by fragrance:</span>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                    {fragranceCategories.map((cat) => (
                         <motion.button
                             key={cat}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${index === 0
-                                    ? 'bg-sage text-white'
-                                    : 'bg-white text-warm-brown border border-beige hover:border-sage hover:text-sage'
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => setActiveFilter(cat)}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeFilter === cat
+                                ? 'bg-sage text-white'
+                                : 'bg-white text-warm-brown border border-beige hover:border-sage'
                                 }`}
                         >
                             {cat}
@@ -67,41 +116,35 @@ export default function CandlesPage() {
                 </div>
             </section>
 
-            {/* Filter Bar */}
-            <section className="px-4 md:px-12 lg:px-24 py-6 border-b border-beige">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <p className="text-warm-brown">
-                        Showing <span className="font-semibold text-deep-brown">{candleProducts.length}</span> candles
-                    </p>
-                    <div className="flex items-center gap-4">
-                        <button className="flex items-center gap-2 px-4 py-2 border border-beige rounded-full text-warm-brown hover:border-sage hover:text-sage">
-                            <Filter className="w-4 h-4" />
-                            <span>Filter</span>
-                        </button>
-                        <select className="px-4 py-2 border border-beige rounded-full text-warm-brown bg-white focus:outline-none focus:border-sage">
-                            <option>Sort by: Featured</option>
-                            <option>Price: Low to High</option>
-                            <option>Price: High to Low</option>
-                            <option>Newest First</option>
-                        </select>
+            {/* Products Grid */}
+            <section className="px-4 md:px-12 lg:px-24 pb-16">
+                {loading ? (
+                    <div className="flex items-center justify-center py-20">
+                        <Loader2 className="w-8 h-8 text-sage animate-spin" />
                     </div>
-                </div>
-            </section>
-
-            {/* Product Grid */}
-            <section className="px-4 md:px-12 lg:px-24 py-12">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {candleProducts.map((product, index) => (
-                        <motion.div
-                            key={product.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.05 }}
-                        >
-                            <ProductCard {...product} />
-                        </motion.div>
-                    ))}
-                </div>
+                ) : filteredProducts.length === 0 ? (
+                    <div className="text-center py-20">
+                        <Flame className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-xl text-deep-brown mb-2">No candles found</h3>
+                        <p className="text-warm-brown">Try a different fragrance filter.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {filteredProducts.map((product) => (
+                            <motion.div
+                                key={product.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                            >
+                                <ProductCard
+                                    product={product}
+                                    onAddToCart={handleAddToCart}
+                                    onRequestStock={handleRequestStock}
+                                />
+                            </motion.div>
+                        ))}
+                    </div>
+                )}
             </section>
 
             {/* Candle Care Banner */}
@@ -119,25 +162,25 @@ export default function CandlesPage() {
                             </div>
                         </div>
                         <div className="w-full md:w-1/2">
-                            <h2 className="font-[family-name:var(--font-dancing)] text-3xl md:text-4xl text-sage mb-4">
+                            <h2 className="font-[family-name:var(--font-dancing)] text-3xl text-sage mb-4">
                                 Candle Care Tips
                             </h2>
                             <ul className="space-y-3 text-warm-brown">
-                                <li className="flex items-start gap-2">
-                                    <Flame className="w-5 h-5 text-terracotta flex-shrink-0 mt-0.5" />
-                                    <span>Trim the wick to 1/4 inch before each burn</span>
+                                <li className="flex items-start gap-3">
+                                    <Flame className="w-5 h-5 text-gold-accent flex-shrink-0 mt-1" />
+                                    <span>First burn should last until the wax pool reaches the edges</span>
                                 </li>
-                                <li className="flex items-start gap-2">
-                                    <Flame className="w-5 h-5 text-terracotta flex-shrink-0 mt-0.5" />
-                                    <span>Let the wax pool reach the edges on first burn</span>
+                                <li className="flex items-start gap-3">
+                                    <Flame className="w-5 h-5 text-gold-accent flex-shrink-0 mt-1" />
+                                    <span>Trim wick to 1/4 inch before each lighting</span>
                                 </li>
-                                <li className="flex items-start gap-2">
-                                    <Flame className="w-5 h-5 text-terracotta flex-shrink-0 mt-0.5" />
-                                    <span>Burn for 2-4 hours at a time for best results</span>
+                                <li className="flex items-start gap-3">
+                                    <Flame className="w-5 h-5 text-gold-accent flex-shrink-0 mt-1" />
+                                    <span>Keep away from drafts for an even burn</span>
                                 </li>
-                                <li className="flex items-start gap-2">
-                                    <Flame className="w-5 h-5 text-terracotta flex-shrink-0 mt-0.5" />
-                                    <span>Keep away from drafts and flammable materials</span>
+                                <li className="flex items-start gap-3">
+                                    <Flame className="w-5 h-5 text-gold-accent flex-shrink-0 mt-1" />
+                                    <span>Never burn for more than 4 hours at a time</span>
                                 </li>
                             </ul>
                         </div>
@@ -146,6 +189,14 @@ export default function CandlesPage() {
             </section>
 
             <Footer />
+
+            {/* Notify Modal */}
+            <NotifyModal
+                isOpen={!!selectedProduct}
+                onClose={() => setSelectedProduct(null)}
+                onSubmit={handleNotifySubmit}
+                productName={selectedProduct?.name || ''}
+            />
         </main>
     );
 }
